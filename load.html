@@ -1,0 +1,107 @@
+<html><head>
+<meta charset="utf-8"/>
+
+<script type="text/javascript">
+
+var userId;
+var numMessages = 0;
+var flag = false;
+function httpPost(url, payload, callback)
+{
+	var pingBit;
+	var idAndpingBit;
+	if(payload == '')
+	{
+		//console.log("payload is empty")
+		pingBit = '0';//This means we are "checking in"
+	}
+	else
+		pingBit = '1';//This means we are sending the back end our new message
+
+	if(userId == null)
+	{
+		idAndpingBit = '?';
+		idAndpingBit = idAndpingBit.concat(pingBit);
+	}
+	else
+	{
+		console.log("what the fuck");
+		idAndpingBit = userId;
+		idAndpingBit = idAndpingBit.concat(pingBit);
+	}
+	var numString = numMessages.toString();
+	idAndpingBit = idAndpingBit.concat(numString);
+	idAndpingBit = idAndpingBit.concat('~');
+	payload = idAndpingBit.concat(payload);
+	//ID|PINGBIT|NUMMESSAGES|"MESSAGE"
+	console.log("Payload: " +payload);
+	var request = new XMLHttpRequest();
+	request.onreadystatechange = function()
+	{
+		if(request.readyState == 4 && request.status == 200) 
+			callback(request.responseText);//response text is from the backend
+	};
+	request.open('post', url, true);
+	request.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+	console.log(payload);
+	console.log(request.getAllResponseHeaders());
+	request.send(payload);
+}
+
+function cb(response) 
+{
+	console.log("The response in cb: " +response);
+	var messageOwner;
+	var p = "p";
+	if(response.charAt(0) != '?' && !flag)
+	{
+		userId = response.charAt(0);
+		flag = true;
+	}
+	if(response.charAt(1) == 0)
+	{
+		console.log("we are here");
+		//console.log(response);
+		return;
+	}
+	if(response.charAt(1) == 1 && response.charAt(2) != 0)
+	{
+		messageOwner = response.charAt(2);
+	}
+	messageOwner = p.concat(messageOwner);
+	messageOwner = messageOwner.concat(": ");
+	response = response.substring(3);
+	response = messageOwner.concat(response);
+
+	console.log("response: " +response);
+	var x = document.getElementById("chatHistory");
+	var option = document.createElement("option");
+	option.text = response;
+	x.add(option);
+	numMessages += 1; 
+}
+
+function sayhi()
+{
+	var msg = document.getElementById("mymessage");
+	httpPost("http://localhost:1234", msg.value, cb);
+}
+
+let timer = setInterval(function() { httpPost("http://localhost:1234", '', cb); }, 100);
+
+</script>
+</head>
+<body>
+<table><tr><td>
+	<form>
+		<select id="chatHistory" size="18" style="width:100%">
+		<option></option>
+		</select>
+		
+	</form>
+	</td></tr>
+	<tr><td>
+		<input type="text" id="mymessage" value="hi">
+		<input type="button" onclick="sayhi();" value="send">
+	</td></tr></table>
+</body></html>
